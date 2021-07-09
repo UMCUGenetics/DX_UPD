@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-import subprocess
+import sys
 import argparse
 import vcf
 
@@ -63,31 +63,33 @@ def parse_vcf(vcf_file):  # returns list with genotypes
 
 
 def make_upd(families, samples):
-    vcf_files = subprocess.getoutput("find -L {input} -type f -iname \"*{suffix}\"".format(input=args.inputfolder, suffix=args.suffix)).split()  ## Make input parameter in NF?
-    print(vcf_files)
-    colors = ["204,204,0", "0,100,224","192,192,192"]
     vcfs = {}
-    for vcf in vcf_files:
+    for vcf in args.input_files:
         sampleid = vcf.split(args.suffix)[0].split("/")[-1].strip("_dedup.realigned")
         if sampleid not in vcfs:
             vcfs[sampleid] = vcf  
-    for sample in families:  ## This assumes that all VCF of all family members are present! Otherwise hard crash....fix this
+    for sample in families:
         family = samples[sample]['family']
-        if sample not in vcfs:
+
+        if sample not in vcfs:  # PED file includes all samples of entire run, not only project. Skip if child VCF is not present in current analysis.
             continue
+    
+        if args.sample_id not in sample:
+            continue
+
         child = parse_vcf(vcfs[sample])
         father = dict(parse_vcf(vcfs[families[sample][0]]))  ## father always first item
         mother = dict(parse_vcf(vcfs[families[sample][1]]))  ## mother always second item
 
-        output_file = open("{}_{}.igv".format(args.outputfile, family), 'w')
-        output_file.write("track type=igv name=UPD_track color=204,204,0 altColor=0,100,224 graphType=bar windowingFunction=none maxHeightPixels=50 viewLimits=-1,1")
+        output_file = open("{}_{}.igv".format(args.run_id, family), 'w')
+        output_file.write("#track type=igv name=UPD_track color=204,204,0 altColor=0,100,224 graphType=bar windowingFunction=none maxHeightPixels=50 viewLimits=-1,1\n")
         chromosome = "1" 
         start = 0
         for variant in child:
             if variant[0] in father and variant[0] in mother:  # position is called in both father and mother
                 position, child_geno, father_geno, mother_geno = variant[0], variant[1], father[variant[0]], mother[variant[0]]
                 label = '' 
-                rgb = ''
+                score = ''
                 chrom = str(position.split("_")[0])
                 if chrom != chromosome:
                     start = 0  
@@ -97,63 +99,29 @@ def make_upd(families, samples):
                 start = start
                 end = snv_pos
 
-                ## Make dictionary here? 
-                if father_geno == "0/0" and mother_geno == "1/1":
-                    if child_geno == "0/0":
-                        label = "patIso" 
-                        rbg = colors[0]
-                        score = 1
-                    elif child_geno == "1/1":
-                        label = "matIso"
-                        rbg = colors[1] 
-                        score = -1
-                    elif child_geno == "0/1":
-                        label = "normal"
-                        rbg = colors[2]
-                        score = 0
-                elif father_geno == "1/1" and mother_geno == "0/0":
-                    if child_geno == "1/1":
-                        label = "patIso"
-                        rbg = colors[0]
-                        score = 1
-                    elif child_geno == "0/0":
-                        label = "matIso"
-                        rbg = colors[1]
-                        score = -1
-                    elif child_geno == "0/1":
-                        label = "normal"
-                        rbg = colors[2]
-                        score = 0
-                elif father_geno == "1/1" and mother_geno == "0/1":
-                    if child_geno == "0/0":
-                        label = "matIso"
-                        rbg = colors[1]
-                        score = -1
-                elif father_geno == "0/1" and mother_geno == "1/1":
-                    if child_geno == "0/0":
-                        label = "patIso"
-                        rbg = colors[0]
-                        score = 1
-                elif father_geno == "0/1" and mother_geno == "0/0":
-                    if child_geno == "0/1":
-                       label = "patHet"
-                       rbg = colors[0]
-                       score = 1
-                elif father_geno == "0/0" and mother_geno == "0/1":
-                    if child_geno == "0/1":
-                       label = "matHet"
-                       rbg = colors[1]
-                       score = -1
-                elif father_geno == "0/1" and mother_geno == "0/0":
-                    if child_geno == "1/1":
-                       label = "patIso"
-                       rbg = colors[0] 
-                       score = 1 
-                elif father_geno == "0/0" and mother_geno == "0/1":
-                    if child_geno == "1/1":
-                       label = "matIso"
-                       rbg = colors[1]
-                       score = -1
+                genotype_conversion = {"0/0":"homref","0/1":"het", "1/1":"homvar"}
+
+                genotype_score = {
+                    "homref_homvar_homref": ["patIso", 1],
+                    "homref_homvar_homvar": ["matIso", -1],
+                    "homref_homvar_het": ["normal", 0],
+                    "homvar_homref_homvar": ["patIso", 1],
+                    "homvar_homref_homref": ["matIso", -1],
+                    "homvar_homref_het": ["normal", 0],
+                    "homvar_het_homref": ["matIso", -1],
+                    "het_homvar_homref": ["patIso", 1],
+                    "het_homref_het": ["patHet", 1],
+                    "homref_het_het": ["matHet", -1],
+                    "het_homref_homvar": ["patIso", 1], 
+                    "homref_het_homvat": ["matIso", -1]
+                    }
+
+                if father_geno in genotype_conversion and mother_geno in genotype_conversion and child_geno in genotype_conversion:
+                    genotype = "{}_{}_{}".format(genotype_conversion[father_geno], genotype_conversion[mother_geno],genotype_conversion[child_geno])
+                    if genotype in genotype_score:
+                        label = genotype_score[genotype][0]
+                        score = genotype_score[genotype][1]
+
                 binsize = 0
             
                 if int(end - start) > args.maxlocus:
@@ -177,20 +145,6 @@ def make_upd(families, samples):
                         score=score
                         ))
 
-                    #output_file.write("{chrom}\t{start}\t{end}\t{label}\t{score}\t{strand}\t{thickStart}\t{thickEnd}\t{itemRgb}\t{blockCount}\t{blockSizes}\t{blockStarts}\n".format(
-                    #    chrom=chrom,
-                    #    start=start-binsize,
-                    #    end=end+binsize,
-                    #    label=label,
-                    #    score=0,
-                    #    strand=".",
-                    #    thickStart=start-binsize,
-                    #    thickEnd=end+binsize,
-                    #    itemRgb=rbg,
-                    #    blockCount=1,
-                    #    blockSizes=end-start+(2*binsize),
-                    #    blockStarts=0          
-                    #    ))
                     start = snv_pos
                    
 
@@ -198,14 +152,25 @@ def make_upd(families, samples):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('inputfolder', help='Path to folder including VCF files')
     parser.add_argument('ped_file', type=argparse.FileType('r'), help='PED file')
-    parser.add_argument('outputfile', help='output prefix filename (i.e. runID)')
-    #parser.add_argument('--gq_thres', default= 99, type=int, help='Threshold for minimum genotypequality (default = 99)')
+    parser.add_argument('run_id', help='run ID prefix')
+    parser.add_argument('sample_id', help='sample id to be processed')
+    parser.add_argument('input_files', nargs='*', help='input files (space separated)')
     parser.add_argument('--mindepth', default= 15, type=int, help='Threshold for minimum depth (DP) of SNV (default = 15)')
     parser.add_argument('--suffix', default= ".vcf", type=str, help='suffix of VCF file to be searched (default = .vvcf)')
     parser.add_argument('--maxlocus', default= 1000000, type=int, help='maximum size of locus to be printed. This reduces large blocks in regions with low informativity (default = 1000000)')
     args = parser.parse_args()
 
     samples, families = parse_ped(args.ped_file)
+    if args.sample_id in families:
+        if not [sampleids for sampleids in args.input_files if args.sample_id in sampleids]: ## If sample_id has VCF in --input_files
+            sys.exit("ERROR: VCF of sample {} is missing or misspelled in sample_id argument.".format(args.sample_id))
+
+        parent_missing = []
+        for parent in families[args.sample_id]: # check if both parents (based on pedigree file) are present in --input_files
+            if not [sampleids for sampleids in args.input_files if parent in sampleids]:
+                parent_missing.append(parent)
+        if parent_missing:
+            sys.exit("ERROR: VCF of parent(s) {} is missing in --input_files, or the pedigree file is incorrect.".format(parent_missing))
+
     make_upd(families, samples)
