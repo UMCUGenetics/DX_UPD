@@ -157,7 +157,7 @@ if __name__ == "__main__":
     parser.add_argument('sample_id', help='sample id to be processed')
     parser.add_argument('input_files', nargs='*', help='input files (space separated)')
     parser.add_argument('--mindepth', default= 15, type=int, help='Threshold for minimum depth (DP) of SNV (default = 15)')
-    parser.add_argument('--suffix', default= ".vcf", type=str, help='suffix of VCF file to be searched (default = .vvcf)')
+    parser.add_argument('--suffix', default= ".vcf", type=str, help='suffix of VCF file to be searched (default = .vcf)')
     parser.add_argument('--maxlocus', default= 1000000, type=int, help='maximum size of locus to be printed. This reduces large blocks in regions with low informativity (default = 1000000)')
     args = parser.parse_args()
 
