@@ -82,7 +82,7 @@ def make_upd(families, samples):
         mother = dict(parse_vcf(vcfs[families[sample][1]]))  ## mother always second item
 
         output_file = open("{}_{}.igv".format(args.run_id, family), 'w')
-        output_file.write("#track type=igv name=UPD_track color=204,204,0 altColor=0,100,224 graphType=bar windowingFunction=none maxHeightPixels=50 viewLimits=-1,1\n")
+        output_file.write("#track type=igv name=Pat/Mat_segments color=204,204,0 altColor=0,100,224 graphType=bar windowingFunction=none maxHeightPixels=50 viewLimits=-1,1\n")
         chromosome = "1" 
         start = 0
         for variant in child:
@@ -104,10 +104,10 @@ def make_upd(families, samples):
                 genotype_score = {
                     "homref_homvar_homref": ["patIso", 1],
                     "homref_homvar_homvar": ["matIso", -1],
-                    "homref_homvar_het": ["normal", 0],
+                    "homref_homvar_het": ["normal", -0.2],
                     "homvar_homref_homvar": ["patIso", 1],
                     "homvar_homref_homref": ["matIso", -1],
-                    "homvar_homref_het": ["normal", 0],
+                    "homvar_homref_het": ["normal", 0.2],
                     "homvar_het_homref": ["matIso", -1],
                     "het_homvar_homref": ["patIso", 1],
                     "het_homref_het": ["patHet", 1],
