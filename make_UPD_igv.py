@@ -35,7 +35,7 @@ def parse_ped(ped_file):
 
 def parse_vcf(vcf_file):  # returns list with genotypes
     with open(vcf_file, 'r') as vcf_input_file:
-        vcf_reader = vcf.Reader(open(vcf_file, 'r'))
+        vcf_reader = vcf.Reader(vcf_input_file)
         sampleid = vcf_reader.samples[0]
         snv_list = []
         for record in vcf_reader:
