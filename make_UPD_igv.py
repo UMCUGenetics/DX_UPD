@@ -84,10 +84,12 @@ def make_upd(families, samples):
     for sample in families:
         family = samples[sample]['family']
 
-        if sample not in vcfs:  # PED file includes all samples of entire run, not only project. Skip if child VCF is not present in current analysis.
-            continue
-    
-        if args.sample_id not in sample:
+        if sample not in vcfs or args.sample_id not in sample:
+            """ 
+            Check if VCF of sample is not missing in input files
+            and  and if it's the correct sample to be processed (sample_id). 
+            If not, continue to next sample
+            """
             continue
 
         child = parse_vcf(vcfs[sample])
