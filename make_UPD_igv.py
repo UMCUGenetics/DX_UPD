@@ -36,12 +36,25 @@ def parse_ped(ped_file):
 def parse_vcf(vcf_file):  # returns list with genotypes
     with open(vcf_file, 'r') as vcf_input_file:
         vcf_reader = vcf.Reader(vcf_input_file)
+
+        if 'fileformat' not in vcf_reader.metadata: # Check if true VCF file
+            sys.exit("Input file {} is not a correct VCF file. "\
+                "Field \"fileformat\" was not detected in VCF".format(args.inputfile)
+                )
+        if len(vcf_reader.samples) > 1: # Check is VCF is not a multisample VCF
+            sys.exit("Single sample VCF support only. Input file {} is a multisample VCF".format(args.inputfile)) 
+
         sampleid = vcf_reader.samples[0]
         snv_list = []
         for record in vcf_reader:
             chrom = record.CHROM
             pos = record.POS
-            dp = record.genotype(sampleid)['DP']
+
+            if 'DP' in record.genotype(sampleid).data._asdict():
+                dp = record.genotype(sampleid)['DP']
+            else: # Skip variant position if DP is missing
+                continue
+
             if dp >= args.mindepth and chrom is not "Y" :
                 if record.genotype(sampleid).phased: # sort genotype in unphased state.
                     gt = record.genotype(sampleid)['GT'].split("|")
@@ -51,7 +64,7 @@ def parse_vcf(vcf_file):  # returns list with genotypes
                     gt = record.genotype(sampleid)['GT']
                 if len(record.ALT) > 1: # skip multiallelic position
                    continue
-                allele = [str(record.REF[0]),str(record.ALT[0])]
+                allele = [str(record.REF[0]), str(record.ALT[0])]
                 variant_call = record.genotype(sampleid).is_variant
                 if variant_call is not None:
                     genotype = [] 
@@ -78,8 +91,8 @@ def make_upd(families, samples):
             continue
 
         child = parse_vcf(vcfs[sample])
-        father = dict(parse_vcf(vcfs[families[sample][0]]))  ## father always first item
-        mother = dict(parse_vcf(vcfs[families[sample][1]]))  ## mother always second item
+        father = dict(parse_vcf(vcfs[families[sample][0]]))  ## father always first item in families dict
+        mother = dict(parse_vcf(vcfs[families[sample][1]]))  ## mother always second item in families dict
 
         output_file = open("{}_{}.igv".format(args.run_id, family), 'w')
         output_file.write("#track type=igv name=Pat/Mat_segments color=204,204,0 altColor=0,100,224 graphType=bar windowingFunction=none maxHeightPixels=50 viewLimits=-1,1\n")
