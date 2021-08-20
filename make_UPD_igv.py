@@ -65,8 +65,8 @@ def parse_vcf(vcf_file):  # returns list with genotypes
                 if len(record.ALT) > 1: # skip multiallelic position
                    continue
                 allele = [str(record.REF[0]), str(record.ALT[0])]
-                variant_call = record.genotype(sampleid).is_variant
-                if variant_call is not None:
+                genotype_call = record.genotype(sampleid).is_variant
+                if genotype_call is not None: # True = ref/alt or alt/alt genotype, False = ref/ref genotype, None = missing genotype (i.e. ./.). Skip missing genotypes in statement.
                     genotype = [] 
                     for item in gt.split("/"):
                         genotype.append(allele[int(item)])
