@@ -34,7 +34,11 @@ def parse_ped(ped_file):
 
 
 def parse_vcf(vcf_file):  # returns list with genotypes
-    with open(vcf_file, 'r') as vcf_input_file:
+    open_mode = "r"
+    if args.compressed:
+        open_mode = "rb"
+
+    with open(vcf_file, open_mode) as vcf_input_file:
         vcf_reader = vcf.Reader(vcf_input_file)
 
         if 'fileformat' not in vcf_reader.metadata: # Check if true VCF file
@@ -78,7 +82,7 @@ def parse_vcf(vcf_file):  # returns list with genotypes
 def make_upd(families, samples):
     vcfs = {}
     for vcf in args.input_files:
-        sampleid = vcf.split(args.suffix)[0].split("/")[-1].strip("_dedup.realigned")
+        sampleid = vcf.split(args.suffix)[0].split("/")[-1].replace("_dedup.realigned","")
         if sampleid not in vcfs:
             vcfs[sampleid] = vcf  
     for sample in families:
@@ -97,7 +101,7 @@ def make_upd(families, samples):
         mother = dict(parse_vcf(vcfs[families[sample][1]]))  ## mother always second item in families dict
 
         output_file = open("{}_{}.igv".format(args.run_id, family), 'w')
-        output_file.write("#track type=igv name=Pat/Mat_segments color=204,204,0 altColor=0,100,224 graphType=bar windowingFunction=none maxHeightPixels=50 viewLimits=-1,1\n")
+        output_file.write("#track type=igv name=Mendelian_violation color=204,204,0 altColor=0,100,224 graphType=bar windowingFunction=none maxHeightPixels=50 viewLimits=-1,1\n")
         chromosome = "1" 
         start = 0
         for variant in child:
@@ -117,18 +121,14 @@ def make_upd(families, samples):
                 genotype_conversion = {"0/0":"homref","0/1":"het", "1/1":"homvar"}
 
                 genotype_score = {
-                    "homref_homvar_homref": ["patIso", 1],
-                    "homref_homvar_homvar": ["matIso", -1],
-                    "homref_homvar_het": ["normal", -0.2],
-                    "homvar_homref_homvar": ["patIso", 1],
-                    "homvar_homref_homref": ["matIso", -1],
-                    "homvar_homref_het": ["normal", 0.2],
-                    "homvar_het_homref": ["matIso", -1],
-                    "het_homvar_homref": ["patIso", 1],
-                    "het_homref_het": ["patHet", 1],
-                    "homref_het_het": ["matHet", -1],
-                    "het_homref_homvar": ["patIso", 1], 
-                    "homref_het_homvat": ["matIso", -1]
+                    "homref_homvar_homref": ["paternal", 1],
+                    "homref_homvar_homvar": ["maternal", -1],
+                    "homvar_homref_homvar": ["paternal", 1],
+                    "homvar_homref_homref": ["maternal", -1],
+                    "het_homvar_homref": ["paternal", 1],
+                    "homvar_het_homref": ["maternal", -1],
+                    "het_homref_homvar": ["paternal", 1], 
+                    "homref_het_homvat": ["maternal", -1]
                     }
 
                 if father_geno in genotype_conversion and mother_geno in genotype_conversion and child_geno in genotype_conversion:
@@ -171,9 +171,10 @@ if __name__ == "__main__":
     parser.add_argument('run_id', help='run ID prefix')
     parser.add_argument('sample_id', help='sample id to be processed')
     parser.add_argument('input_files', nargs='+', help='input files (space separated)')
+    parser.add_argument('-c', '--compressed', action='store_true', help='VCF input is compressed (.gz)')
     parser.add_argument('--mindepth', default= 15, type=int, help='Threshold for minimum depth (DP) of SNV (default = 15)')
     parser.add_argument('--suffix', default= ".vcf", type=str, help='suffix of VCF file to be searched (default = .vcf)')
-    parser.add_argument('--maxlocus', default= 1000000, type=int, help='maximum size of locus to be printed. This reduces large blocks in regions with low informativity (default = 1000000)')
+    parser.add_argument('--maxlocus', default= 50000, type=int, help='maximum size of locus to be printed. This reduces large blocks in regions with low informativity (default = 1000000)')
     args = parser.parse_args()
 
     samples, families = parse_ped(args.ped_file)
@@ -187,5 +188,4 @@ if __name__ == "__main__":
                 parent_missing.append(parent)
         if parent_missing:
             sys.exit("ERROR: VCF of parent(s) {} is missing in --input_files, or the pedigree file is incorrect.".format(parent_missing))
-
     make_upd(families, samples)
