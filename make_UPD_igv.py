@@ -131,6 +131,14 @@ def make_upd(families, samples):
                     "homref_het_homvat": ["maternal", -1]
                     }
 
+                if args.includenormal:
+                    genotype_score["homref_homvar_het"] = ["normal", 0]
+                    genotype_score["homvar_homref_het"] = ["normal", 0]
+                 
+                if args.includehet:
+                    genotype_score["het_homref_het"] = ["paternalHet", 1]
+                    genotype_score["homref_het_het"] = ["maternalHet", -1]
+               
                 if father_geno in genotype_conversion and mother_geno in genotype_conversion and child_geno in genotype_conversion:
                     genotype = "{}_{}_{}".format(genotype_conversion[father_geno], genotype_conversion[mother_geno],genotype_conversion[child_geno])
                     if genotype in genotype_score:
@@ -175,6 +183,8 @@ if __name__ == "__main__":
     parser.add_argument('--mindepth', default= 15, type=int, help='Threshold for minimum depth (DP) of SNV (default = 15)')
     parser.add_argument('--suffix', default= ".vcf", type=str, help='suffix of VCF file to be searched (default = .vcf)')
     parser.add_argument('--maxlocus', default= 50000, type=int, help='maximum size of locus to be printed. This reduces large blocks in regions with low informativity (default = 1000000)')
+    parser.add_argument('--includehet', action='store_true', help='Include (possible) heterodisomy SNVs')
+    parser.add_argument('--includenormal', action='store_true', help='Include normal inherited SNVs')
     args = parser.parse_args()
 
     samples, families = parse_ped(args.ped_file)
