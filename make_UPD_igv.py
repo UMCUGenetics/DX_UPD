@@ -85,6 +85,7 @@ def make_upd(families, samples):
         sampleid = vcf.split(args.suffix)[0].split("/")[-1].replace("_dedup.realigned","")
         if sampleid not in vcfs:
             vcfs[sampleid] = vcf  
+
     for sample in families:
         family = samples[sample]['family']
 
@@ -102,6 +103,7 @@ def make_upd(families, samples):
 
         output_file = open("{}_{}.igv".format(args.run_id, family), 'w')
         output_file.write("#track type=igv name=Mendelian_violation color=204,204,0 altColor=0,100,224 graphType=bar windowingFunction=none maxHeightPixels=50 viewLimits=-1,1\n")
+        output_file.write("chromosome\tstart\tstop\tlabel\tinheritence\n")
         chromosome = "1" 
         start = 0
         for variant in child:
@@ -169,7 +171,6 @@ def make_upd(families, samples):
                         ))
 
                     start = snv_pos
-                   
 
         output_file.close()
 
@@ -182,7 +183,7 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--compressed', action='store_true', help='VCF input is compressed (.gz)')
     parser.add_argument('--mindepth', default= 15, type=int, help='Threshold for minimum depth (DP) of SNV (default = 15)')
     parser.add_argument('--suffix', default= ".vcf", type=str, help='suffix of VCF file to be searched (default = .vcf)')
-    parser.add_argument('--maxlocus', default= 50000, type=int, help='maximum size of locus to be printed. This reduces large blocks in regions with low informativity (default = 1000000)')
+    parser.add_argument('--maxlocus', default= 50000, type=int, help='maximum size of locus to be printed. This reduces large blocks in regions with low informativity (default = 50000)')
     parser.add_argument('--includehet', action='store_true', help='Include (possible) heterodisomy SNVs')
     parser.add_argument('--includenormal', action='store_true', help='Include normal inherited SNVs')
     args = parser.parse_args()
@@ -191,7 +192,6 @@ if __name__ == "__main__":
     if args.sample_id in families:
         if not [sampleids for sampleids in args.input_files if args.sample_id in sampleids]: ## If sample_id has VCF in --input_files
             sys.exit("ERROR: VCF of sample {} is missing or misspelled in sample_id argument.".format(args.sample_id))
-
         parent_missing = []
         for parent in families[args.sample_id]: # check if both parents (based on pedigree file) are present in --input_files
             if not [sampleids for sampleids in args.input_files if parent in sampleids]:
@@ -199,3 +199,4 @@ if __name__ == "__main__":
         if parent_missing:
             sys.exit("ERROR: VCF of parent(s) {} is missing in --input_files, or the pedigree file is incorrect.".format(parent_missing))
     make_upd(families, samples)
+
