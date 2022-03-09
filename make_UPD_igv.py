@@ -62,7 +62,7 @@ def parse_vcf(vcf_file):  # returns list with genotypes
             else:  # Skip variant position if DP is missing
                 continue
 
-            if dp >= args.mindepth and chrom == "Y":
+            if dp >= args.mindepth and chrom != "Y":
                 if record.genotype(sampleid).phased:  # sort genotype in unphased state.
                     gt = record.genotype(sampleid)['GT'].split("|")
                     gt.sort()
@@ -102,7 +102,6 @@ def make_upd(families, samples):
             If not, continue to next sample
             """
             continue
-
         child = parse_vcf(vcfs[sample])
         father = dict(parse_vcf(vcfs[families[sample][0]]))  # father always first item in families dict
         mother = dict(parse_vcf(vcfs[families[sample][1]]))  # mother always second item in families dict
