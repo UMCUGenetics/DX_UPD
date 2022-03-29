@@ -85,7 +85,7 @@ def parse_vcf(vcf_file):  # returns list with genotypes
     return snv_list
 
 
-def make_upd(families, samples, child):
+def make_upd(families, samples, child_id):
     vcfs = {}
     for vcf_file in args.input_files:
         sampleid = vcf_file.split(args.suffix)[0].split("/")[-1].replace("_dedup.realigned", "")
@@ -106,7 +106,7 @@ def make_upd(families, samples, child):
         father = dict(parse_vcf(vcfs[families[sample][0]]))  # father always first item in families dict
         mother = dict(parse_vcf(vcfs[families[sample][1]]))  # mother always second item in families dict
 
-        output_file = open("{}_{}_{}.igv".format(args.run_id, family, child), 'w')
+        output_file = open("{}_{}_{}.igv".format(args.run_id, family, child_id), 'w')
         output_file.write(
             "#track type=igv name=Mendelian_violation color=204,204,0 altColor=0,100,224 "
             "graphType=bar windowingFunction=none maxHeightPixels=50 viewLimits=-1,1\n"
