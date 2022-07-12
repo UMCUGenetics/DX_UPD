@@ -138,7 +138,7 @@ def make_upd(families, samples, child_id):
                     "het_homvar_homref": ["paternal", 1],
                     "homvar_het_homref": ["maternal", -1],
                     "het_homref_homvar": ["paternal", 1],
-                    "homref_het_homvat": ["maternal", -1]
+                    "homref_het_homvar": ["maternal", -1]
                     }
 
                 if args.includenormal:
